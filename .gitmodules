@@ -1,0 +1,9 @@
+[submodule "submodules/yosys"]
+	path = submodules/yosys
+	url = https://github.com/YosysHQ/yosys.git
+[submodule "submodules/openroad"]
+	path = submodules/openroad
+	url = https://github.com/The-OpenROAD-Project/OpenROAD.git
+[submodule "submodules/openroad-flow-scripts"]
+	path = submodules/openroad-flow-scripts
+	url = https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git
