@@ -1,4 +1,4 @@
-# Yosys + OpenROAD + Nangate45 로컬 실습 환경
+# Yosys OpenROAD Nangate45 Lab
 
 이 저장소는 **Yosys 합성**과 **OpenROAD 물리 구현**을 이용해 RTL에서 **CTS, routing, GDS**까지 한 번에 따라갈 수 있도록 정리한 실습용 환경이다.  
 기본 예제는 `OpenROAD-flow-scripts`(ORFS)의 **Nangate45 / gcd** 디자인을 사용한다.
@@ -73,7 +73,7 @@ sudo apt install -y --no-install-recommends \
 
 ```bash
 git clone --recurse-submodules <your-repo-url>
-cd 08_Yosys
+cd yosys-openroad-nangate45-lab
 ```
 
 이미 clone한 뒤라면:
