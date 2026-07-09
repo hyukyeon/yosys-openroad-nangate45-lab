@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$SCRIPT_DIR"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  ./create_new_project <project_name>
+
+Example:
+  ./create_new_project riscv
+
+This creates:
+  projects/<project_name>/rtl/<project_name>.v
+  projects/<project_name>/constraints/<project_name>.sdc
+  projects/<project_name>/configs/nangate45/<project_name>.mk
+EOF
+}
+
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+  usage
+  exit 0
+fi
+
+if [ "$#" -ne 1 ]; then
+  usage >&2
+  exit 1
+fi
+
+PROJECT_NAME="$1"
+
+if [[ ! "$PROJECT_NAME" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  echo "Invalid project name: $PROJECT_NAME" >&2
+  echo "Use a Verilog-safe identifier: letters, digits, underscore; do not start with a digit." >&2
+  exit 1
+fi
+
+PROJECT_DIR="$REPO_ROOT/projects/$PROJECT_NAME"
+RTL_DIR="$PROJECT_DIR/rtl"
+CONSTRAINTS_DIR="$PROJECT_DIR/constraints"
+CONFIG_DIR="$PROJECT_DIR/configs/nangate45"
+
+if [ -e "$PROJECT_DIR" ]; then
+  echo "Project already exists: $PROJECT_DIR" >&2
+  exit 1
+fi
+
+mkdir -p "$RTL_DIR" "$CONSTRAINTS_DIR" "$CONFIG_DIR"
+
+cp "$REPO_ROOT/rtl/template_top.v" "$RTL_DIR/$PROJECT_NAME.v"
+cp "$REPO_ROOT/constraints/template_top.sdc" "$CONSTRAINTS_DIR/$PROJECT_NAME.sdc"
+
+sed -i "s/template_top/$PROJECT_NAME/g" "$RTL_DIR/$PROJECT_NAME.v" "$CONSTRAINTS_DIR/$PROJECT_NAME.sdc"
+
+cat > "$CONFIG_DIR/$PROJECT_NAME.mk" <<EOF
+export DESIGN_NAME = $PROJECT_NAME
+export PLATFORM    = nangate45
+
+export PROJECT_ROOT := \$(abspath \$(dir \$(lastword \$(MAKEFILE_LIST)))/../..)
+export LAB_ROOT := \$(abspath \$(PROJECT_ROOT)/../..)
+
+export VERILOG_FILES = \$(PROJECT_ROOT)/rtl/$PROJECT_NAME.v
+export SDC_FILE      = \$(PROJECT_ROOT)/constraints/$PROJECT_NAME.sdc
+
+export ABC_AREA      = 1
+export CORE_UTILIZATION ?= 30
+export PLACE_DENSITY_LB_ADDON = 0.20
+export TNS_END_PERCENT        = 100
+export SYNTH_REPEATABLE_BUILD ?= 1
+
+# Reuse the smaller-pitch PDN setup used by the ORFS nangate45 gcd example.
+export PDN_TCL ?= \$(LAB_ROOT)/submodules/openroad-flow-scripts/flow/designs/nangate45/gcd/grid_strategy-M1-M4-M7.tcl
+EOF
+
+cat <<EOF
+Created project: $PROJECT_NAME
+
+Files:
+  $RTL_DIR/$PROJECT_NAME.v
+  $CONSTRAINTS_DIR/$PROJECT_NAME.sdc
+  $CONFIG_DIR/$PROJECT_NAME.mk
+
+Run with:
+  DESIGN_CONFIG="$CONFIG_DIR/$PROJECT_NAME.mk" ./scripts/run-nangate45-gcd.sh
+EOF

@@ -32,6 +32,12 @@
 | --- | --- |
 | `scripts/setup-toolchain.sh` | Yosys/OpenROAD를 로컬 prefix에 빌드/설치 |
 | `scripts/run-nangate45-gcd.sh` | 검증된 Nangate45 gcd 샘플 플로우 실행 |
+| `scripts/run-stage.sh` | 프로젝트별 ORFS 단계/유틸리티 타깃 실행 래퍼 |
+| `create_new_project` | 새 프로젝트 디렉터리와 기본 RTL/SDC/config 생성 |
+| `rtl/` | 사용자 RTL 소스 |
+| `constraints/` | 사용자 SDC 제약 파일 |
+| `configs/nangate45/` | 사용자 디자인용 ORFS config 템플릿 |
+| `projects/` | 생성 스크립트로 만든 프로젝트별 작업 디렉터리 |
 | `submodules/yosys` | Yosys 서브모듈 |
 | `submodules/openroad` | OpenROAD 서브모듈 |
 | `submodules/openroad-flow-scripts` | ORFS 서브모듈 |
@@ -147,6 +153,69 @@ submodules/openroad-flow-scripts/flow/designs/nangate45/gcd/
 - SDC 제약 파일
 - 플랫폼 정보(lib/lef)는 ORFS의 공개 플랫폼 사용 또는 별도 플랫폼 준비
 
+이 저장소에는 바로 새 프로젝트를 만드는 생성 스크립트와 템플릿이 포함되어 있다.
+
+가장 빠른 시작 방법:
+
+```bash
+./create_new_project riscv
+```
+
+그러면 아래가 생성된다.
+
+```text
+projects/riscv/rtl/riscv.v
+projects/riscv/constraints/riscv.sdc
+projects/riscv/configs/nangate45/riscv.mk
+```
+
+실행:
+
+```bash
+DESIGN_CONFIG="$PWD/projects/riscv/configs/nangate45/riscv.mk" \
+./scripts/run-nangate45-gcd.sh
+```
+
+단계별 실행은 래퍼 스크립트로 바로 할 수 있다.
+
+```bash
+./scripts/run-stage.sh synth riscv
+./scripts/run-stage.sh floorplan riscv
+./scripts/run-stage.sh place riscv
+./scripts/run-stage.sh cts riscv
+./scripts/run-stage.sh route riscv
+./scripts/run-stage.sh finish riscv
+./scripts/run-stage.sh all riscv
+```
+
+이 스크립트는 내부적으로 아래 config를 자동으로 찾는다.
+
+```text
+projects/riscv/configs/nangate45/riscv.mk
+```
+
+직접 구조를 보고 싶다면 기본 템플릿은 아래에 있다.
+
+```text
+rtl/template_top.v
+constraints/template_top.sdc
+configs/nangate45/template_top.mk
+```
+
+수동으로 시작할 때는 아래처럼 복사해서 이름만 바꿔도 된다.
+
+```bash
+cp rtl/template_top.v rtl/my_top.v
+cp constraints/template_top.sdc constraints/my_top.sdc
+cp configs/nangate45/template_top.mk configs/nangate45/my_top.mk
+```
+
+그 다음 세 군데를 맞춰 주면 된다.
+
+1. `rtl/my_top.v`의 top module 이름
+2. `constraints/my_top.sdc`의 `current_design`와 clock port 이름
+3. `configs/nangate45/my_top.mk`의 `DESIGN_NAME`, `VERILOG_FILES`, `SDC_FILE`
+
 직접 실행 예시는 아래와 같다.
 
 ```bash
@@ -156,6 +225,75 @@ make DESIGN_CONFIG=./designs/nangate45/gcd/config.mk \
   OPENROAD_EXE="$PWD/../../../.toolchain/bin/openroad" \
   YOSYS_EXE="$PWD/../../../.toolchain/bin/yosys" \
   KLAYOUT_CMD="$(command -v klayout)"
+```
+
+이 저장소 템플릿으로 실행할 때는 아래처럼 하면 된다.
+
+```bash
+DESIGN_CONFIG="$PWD/configs/nangate45/template_top.mk" \
+./scripts/run-nangate45-gcd.sh
+```
+
+### 단계별/유틸리티 타깃
+
+ORFS는 단계가 분리되어 있어서 부분 실행과 디버깅이 가능하다.
+
+주요 단계:
+
+- `synth`
+- `floorplan`
+- `place`
+- `cts`
+- `route`
+- `finish`
+- `all`
+
+프로젝트 래퍼 예:
+
+```bash
+./scripts/run-stage.sh synth riscv
+./scripts/run-stage.sh route riscv
+./scripts/run-stage.sh all riscv
+```
+
+정리용 타깃:
+
+- `clean_synth`
+- `clean_floorplan`
+- `clean_place`
+- `clean_cts`
+- `clean_route`
+- `clean_finish`
+- `clean_all`
+- `nuke`
+
+예:
+
+```bash
+./scripts/run-stage.sh clean_route riscv
+./scripts/run-stage.sh clean_all riscv
+```
+
+디버깅/뷰어 타깃:
+
+- `open_synth`
+- `open_floorplan`
+- `open_place`
+- `open_cts`
+- `open_route`
+- `open_final`
+- `gui_synth`
+- `gui_floorplan`
+- `gui_place`
+- `gui_cts`
+- `gui_route`
+- `gui_final`
+
+예:
+
+```bash
+./scripts/run-stage.sh open_place riscv
+./scripts/run-stage.sh gui_final riscv
 ```
 
 ## 8. 왜 apt의 yosys 대신 로컬 빌드를 쓰는가
